@@ -2,11 +2,17 @@ defmodule TaskPipelineWeb.Router do
   use TaskPipelineWeb, :router
 
   pipeline :api do
-    plug :accepts, ["json"]
+    plug(:accepts, ["json"])
   end
 
   scope "/api", TaskPipelineWeb do
-    pipe_through :api
+    pipe_through(:api)
+
+    get("/tasks/summary", TaskController, :summary)
+    get("/tasks", TaskController, :index)
+    get("/tasks/:id", TaskController, :show)
+
+    post("/tasks", TaskController, :create)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
@@ -19,10 +25,10 @@ defmodule TaskPipelineWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
-      pipe_through [:fetch_session, :protect_from_forgery]
+      pipe_through([:fetch_session, :protect_from_forgery])
 
-      live_dashboard "/dashboard", metrics: TaskPipelineWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      live_dashboard("/dashboard", metrics: TaskPipelineWeb.Telemetry)
+      forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
 end
