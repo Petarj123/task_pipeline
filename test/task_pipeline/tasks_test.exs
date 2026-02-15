@@ -1,5 +1,6 @@
 defmodule TaskPipeline.TasksTest do
   use TaskPipeline.DataCase
+  use Oban.Testing, repo: TaskPipeline.Repo
 
   alias TaskPipeline.Tasks
   alias TaskPipeline.Tasks.Task
@@ -29,6 +30,12 @@ defmodule TaskPipeline.TasksTest do
       assert task.max_attempts == 5
       assert task.status == :queued
       assert task.attempts == []
+
+      assert_enqueued(
+        worker: TaskPipeline.Workers.TaskProcessor,
+        args: %{"task_id" => task.id},
+        max_attempts: 5
+      )
     end
 
     test "returns changeset errors for required fields and invalid max_attempts" do

@@ -7,6 +7,7 @@ defmodule TaskPipeline.Tasks do
   alias TaskPipeline.Repo
   alias TaskPipeline.Tasks.Task
   alias TaskPipeline.Tasks.TaskFilters
+  alias TaskPipeline.Workers.TaskProcessor
 
   @doc """
   Returns the list of tasks with optional filtering and sorting.
@@ -97,7 +98,12 @@ defmodule TaskPipeline.Tasks do
   end
 
   @doc """
-  Creates a task.
+  Creates a task and schedules it for async processing.
+
+  Returns:
+    * `{:ok, task}` when the task is inserted and the job is enqueued
+    * `{:error, changeset}` when task validation or insert fails
+    * `{:error, reason}` when job enqueue fails and the transaction is rolled back
 
   ## Examples
 
@@ -109,9 +115,16 @@ defmodule TaskPipeline.Tasks do
 
   """
   def create_task(attrs) do
-    %Task{}
-    |> Task.changeset(attrs)
-    |> Repo.insert()
+    changeset = change_task(%Task{}, attrs)
+
+    Repo.transact(fn ->
+      with {:ok, task} <- Repo.insert(changeset),
+           {:ok, _job} <- TaskProcessor.schedule(task) do
+        {:ok, task}
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """
@@ -174,6 +187,30 @@ defmodule TaskPipeline.Tasks do
       failed: 0
     }
     |> Map.merge(counts)
+  end
+
+  @doc """
+  Atomically claims a task for processing.
+
+  Returns:
+    * `{:ok, task}` - Successfully claimed the task
+    * `{:error, :not_claimed}` - Task doesn't exist or already claimed
+
+  ## Examples
+
+      iex> claim_task_for_processing(123)
+      {:ok, %Task{status: :processing}}
+
+      iex> claim_task_for_processing(123)
+      {:error, :not_claimed}
+  """
+  def claim_task_for_processing(task_id) do
+    from(t in Task, where: t.id == ^task_id and t.status == :queued, select: t)
+    |> Repo.update_all(set: [status: :processing, updated_at: NaiveDateTime.utc_now()])
+    |> case do
+      {1, [task]} -> {:ok, task}
+      _ -> {:error, :not_claimed}
+    end
   end
 
   defp apply_filters(query, filters) do
