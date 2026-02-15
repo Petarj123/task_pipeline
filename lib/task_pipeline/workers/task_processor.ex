@@ -3,7 +3,7 @@ defmodule TaskPipeline.Workers.TaskProcessor do
   Oban worker for processing tasks asynchronously.
   """
 
-  use Oban.Worker, unique: [period: 60, fields: [:args]]
+  use Oban.Worker
   alias TaskPipeline.Tasks
   require Logger
 
