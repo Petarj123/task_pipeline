@@ -177,6 +177,14 @@ defmodule TaskPipelineWeb.TaskControllerTest do
       conn = get(conn, ~p"/api/tasks/-1")
       assert json_response(conn, 404)["errors"] != %{}
     end
+
+    test "returns 400 when invalid id is provided", %{conn: conn} do
+      conn = get(conn, ~p"/api/tasks/invalid_id")
+
+      assert json_response(conn, 400)["errors"] == %{
+               "detail" => "id: #{inspect("invalid_id")} is not valid"
+             }
+    end
   end
 
   describe "GET /api/tasks/summary" do

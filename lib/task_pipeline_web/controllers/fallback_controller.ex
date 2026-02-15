@@ -19,4 +19,11 @@ defmodule TaskPipelineWeb.FallbackController do
     |> put_view(json: TaskPipelineWeb.ErrorJSON)
     |> render(:"404")
   end
+
+  def call(conn, {:error, message}) do
+    conn
+    |> put_status(:bad_request)
+    |> put_view(json: TaskPipelineWeb.ErrorJSON)
+    |> render(:"400", %{message: message})
+  end
 end

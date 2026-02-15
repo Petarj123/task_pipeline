@@ -22,8 +22,14 @@ defmodule TaskPipelineWeb.TaskController do
   end
 
   def show(conn, %{"id" => id}) do
-    with {:ok, task} <- Tasks.get_task(id) do
-      render(conn, :show, task: task)
+    case Integer.parse(id) do
+      {int_id, ""} ->
+        with {:ok, task} <- Tasks.get_task(int_id) do
+          render(conn, :show, task: task)
+        end
+
+      _ ->
+        {:error, "id: #{inspect(id)} is not valid"}
     end
   end
 
