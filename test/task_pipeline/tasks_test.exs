@@ -222,6 +222,30 @@ defmodule TaskPipeline.TasksTest do
     end
   end
 
+  describe "claim_task_for_processing/1" do
+    test "claims a queued task atomically and persists processing status" do
+      task = raw_task_fixture(%{status: :queued})
+      previous_updated_at = task.updated_at
+
+      assert {:ok, claimed} = Tasks.claim_task_for_processing(task.id)
+      assert claimed.id == task.id
+      assert claimed.status == :processing
+
+      updated = Tasks.get_task!(task.id)
+      assert updated.status == :processing
+      assert NaiveDateTime.compare(updated.updated_at, previous_updated_at) in [:gt, :eq]
+    end
+
+    test "returns not_claimed when task is not queued" do
+      task = raw_task_fixture(%{status: :processing})
+      assert {:error, :not_claimed} = Tasks.claim_task_for_processing(task.id)
+    end
+
+    test "returns not_claimed when task id does not exist" do
+      assert {:error, :not_claimed} = Tasks.claim_task_for_processing(-1)
+    end
+  end
+
   defp fetch_attempt_value(attempt_map, key) do
     Map.get(attempt_map, key) || Map.get(attempt_map, String.to_existing_atom(key))
   end
