@@ -25,7 +25,6 @@ defmodule TaskPipeline.Tasks.Task do
     |> cast(attrs, [:title, :type, :priority, :payload, :max_attempts])
     |> validate_required([:title, :type, :payload])
     |> validate_number(:max_attempts, greater_than: 0)
-    |> apply_check_constraints()
   end
 
   @doc false
@@ -34,7 +33,6 @@ defmodule TaskPipeline.Tasks.Task do
     |> cast(attrs, [:status, :attempts])
     |> validate_required([:status])
     |> validate_status_transition()
-    |> apply_check_constraints()
   end
 
   defp validate_status_transition(changeset) do
@@ -62,11 +60,4 @@ defmodule TaskPipeline.Tasks.Task do
   defp valid_transition?(:processing, :queued), do: true
   defp valid_transition?(:processing, :failed), do: true
   defp valid_transition?(_, _), do: false
-
-  defp apply_check_constraints(changeset) do
-    changeset
-    |> check_constraint(:type, name: :type_must_be_valid, message: "is invalid")
-    |> check_constraint(:priority, name: :priority_must_be_valid, message: "is invalid")
-    |> check_constraint(:status, name: :status_must_be_valid, message: "is invalid")
-  end
 end
